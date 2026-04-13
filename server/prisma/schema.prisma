@@ -1,0 +1,153 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum RoomAvailability {
+  AVAILABLE
+  PARTIALLY_OCCUPIED
+  FULL
+  MAINTENANCE
+}
+
+enum ComplaintStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  OVERDUE
+}
+
+enum AllocationStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+model Student {
+  id             Int          @id @default(autoincrement())
+  fullName       String
+  age            Int
+  gender         Gender
+  course         String
+  academicYear   Int
+  contactNumber  String       @unique
+  email          String?      @unique
+  passwordHash   String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  preferences    Preference?
+  lifestyle      Lifestyle?
+  complaints     Complaint[]
+  fees           Fee[]
+  allocations    Allocation[]
+}
+
+model Admin {
+  id            Int       @id @default(autoincrement())
+  fullName      String
+  email         String?   @unique
+  passwordHash  String?
+  role          String    @default("ADMIN")
+  designation   String
+  contactNumber String    @unique
+  department    String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @default(now()) @updatedAt
+  hostels       Hostel[]  @relation("HostelManagers")
+}
+
+model Hostel {
+  id         Int          @id @default(autoincrement())
+  hostelName String
+  block      String
+  capacity   Int
+  address    String
+  rooms      Room[]
+  admins     Admin[]      @relation("HostelManagers")
+  allocations Allocation[]
+}
+
+model Room {
+  id            Int               @id @default(autoincrement())
+  roomNumber    String
+  floor         Int
+  capacity      Int
+  availability  RoomAvailability  @default(AVAILABLE)
+  hostelId      Int
+  hostel        Hostel            @relation(fields: [hostelId], references: [id], onDelete: Cascade)
+  complaints    Complaint[]
+  allocations   Allocation[]
+
+  @@unique([hostelId, roomNumber])
+}
+
+model Preference {
+  id               Int     @id @default(autoincrement())
+  studentId        Int     @unique
+  sleepTime        String
+  studyHabit       String
+  cleanlinessLevel String
+  foodPreference   String
+  student          Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+}
+
+model Lifestyle {
+  id             Int     @id @default(autoincrement())
+  studentId      Int     @unique
+  smoking        Boolean
+  drinking       Boolean
+  musicVolume    String
+  guestFrequency String
+  student        Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+}
+
+model Complaint {
+  id            Int             @id @default(autoincrement())
+  studentId     Int
+  roomId        Int
+  complaintType String
+  description   String
+  status        ComplaintStatus @default(OPEN)
+  raisedAt      DateTime        @default(now())
+  student       Student         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  room          Room            @relation(fields: [roomId], references: [id], onDelete: Cascade)
+}
+
+model Fee {
+  id            Int           @id @default(autoincrement())
+  studentId     Int
+  amount        Decimal       @db.Decimal(10, 2)
+  dueDate       DateTime
+  paymentDate   DateTime?
+  paymentStatus PaymentStatus @default(PENDING)
+  student       Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+}
+
+model Allocation {
+  id             Int              @id @default(autoincrement())
+  studentId      Int
+  roomId         Int
+  hostelId       Int
+  allocationDate DateTime         @default(now())
+  startDate      DateTime
+  endDate        DateTime?
+  status         AllocationStatus @default(ACTIVE)
+  student        Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  room           Room             @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  hostel         Hostel           @relation(fields: [hostelId], references: [id], onDelete: Cascade)
+}
